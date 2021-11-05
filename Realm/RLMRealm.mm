@@ -967,6 +967,32 @@ REALM_NOINLINE void RLMRealmTranslateException(NSError **error) {
     return NO;
 }
 
+- (BOOL)exportForSyncWithConfiguration:(RLMRealmConfiguration *)configuration error:(NSError **)error {
+    if (self.configuration.syncConfiguration) {
+        RLMSetErrorOrThrow(RLMMakeError(RLMErrorFail, @"Cannot export a Synced Realm."), error);
+        return NO;
+    }
+    if (!configuration.syncConfiguration) {
+        RLMSetErrorOrThrow(RLMMakeError(RLMErrorFail, @"Exporting a local Realm requires that you pass a configuration for a synced Realm."), error);
+        return NO;
+    }
+    if (RLMIsRealmCachedAtPath(configuration.pathOnDisk)) {
+        RLMSetErrorOrThrow(RLMMakeError(RLMErrorFileExists, @"Synced Realm already exists for configuration."), error);
+        return NO;
+    }
+    try {
+        _realm->verify_thread();
+        _realm->export_to(configuration.config);
+    }
+    catch (...) {
+        if (error) {
+            RLMRealmTranslateException(error);
+        }
+        return NO;
+    }
+    return YES;
+}
+
 + (BOOL)fileExistsForConfiguration:(RLMRealmConfiguration *)config {
     return [NSFileManager.defaultManager fileExistsAtPath:config.pathOnDisk];
 }

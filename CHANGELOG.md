@@ -1,7 +1,8 @@
 x.y.z Release notes (yyyy-MM-dd)
 =============================================================
 ### Enhancements
-* None.
+* Add ability to export a local non-sync Realm to a sync compatible Realm. 
+  This can be invoked with `Realm.exportForSync(config:)`/`[RLMRealm exportForSyncWithConfiguration:]`
 
 ### Fixed
 * <How to hit and notice issue? what was the impact?> ([#????](https://github.com/realm/realm-swift/issues/????), since v?.?.?)

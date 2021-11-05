@@ -915,6 +915,19 @@ import Realm.Private
     }
 
     /**
+     Exports a local Realm for use with MongoDB Realm Sync.
+
+     A Realm for the given Sync User configuration cannot already exist.
+
+     - parameter config: A configuration to be passed from a `User`.
+
+     - throws: An `NSError` if the export could not be performed.
+     */
+    public func exportForSync(config: Realm.Configuration) throws {
+        try rlmRealm.exportForSync(with: config.rlmConfiguration)
+    }
+
+    /**
      Checks if the Realm file for the given configuration exists locally on disk.
 
      For non-synchronized, non-in-memory Realms, this is equivalent to
