@@ -924,6 +924,51 @@ class SwiftObjectServerTests: SwiftSyncTestCase {
         waitForExpectations(timeout: 10.0, handler: nil)
     }
 
+    func testDeleteUser() {
+        let email = "realm_tests_do_autoverify\(randomString(7))@\(randomString(7)).com"
+        let password = randomString(10)
+
+        let registerUserEx = expectation(description: "Register user")
+
+        app.emailPasswordAuth.registerUser(email: email, password: password) { (error) in
+            XCTAssertNil(error)
+            registerUserEx.fulfill()
+        }
+        wait(for: [registerUserEx], timeout: 4.0)
+
+        let loginEx = expectation(description: "Login user")
+        var syncUser: User?
+
+        app.login(credentials: Credentials.emailPassword(email: email, password: password)) { result in
+            switch result {
+            case .success(let user):
+                syncUser = user
+            case .failure:
+                XCTFail("Should login user")
+            }
+            loginEx.fulfill()
+        }
+
+        wait(for: [loginEx], timeout: 4.0)
+
+        XCTAssertEqual(syncUser?.id, app.currentUser?.id)
+        XCTAssertEqual(app.allUsers.count, 1)
+
+        let deleteEx = expectation(description: "Delete user")
+
+        XCTAssertNotNil(syncUser)
+
+        syncUser?.delete { (error) in
+            XCTAssertNil(error)
+            deleteEx.fulfill()
+        }
+
+        wait(for: [deleteEx], timeout: 4.0)
+
+        XCTAssertNil(app.currentUser)
+        XCTAssertEqual(app.allUsers.count, 0)
+    }
+
     func testAppLinkUser() {
         let email = "realm_tests_do_autoverify\(randomString(7))@\(randomString(7)).com"
         let password = randomString(10)
@@ -1847,6 +1892,36 @@ class CombineObjectServerTests: SwiftSyncTestCase {
 
         XCTAssertEqual(app.currentUser?.customData["favourite_colour"], .string("green"))
         XCTAssertEqual(app.currentUser?.customData["apples"], .int64(10))
+    }
+
+    func testDeleteUserCombine() {
+        let email = "realm_tests_do_autoverify\(randomString(7))@\(randomString(7)).com"
+        let password = randomString(10)
+
+        let deleteEx = expectation(description: "Delete user")
+        let appEx = expectation(description: "App changes triggered")
+        var triggered = 0
+        app.objectWillChange.sink { _ in
+            triggered += 1
+            if triggered == 2 {
+                appEx.fulfill()
+            }
+        }.store(in: &subscriptions)
+
+        app.emailPasswordAuth.registerUser(email: email, password: password)
+            .flatMap { self.app.login(credentials: .emailPassword(email: email, password: password)) }
+            .flatMap { $0.delete() }
+            .sink(receiveCompletion: { completion in
+                if case let .failure(error) = completion {
+                    XCTFail("Should have completed login chain: \(error.localizedDescription)")
+                }
+            }, receiveValue: {
+                deleteEx.fulfill()
+            })
+            .store(in: &subscriptions)
+        wait(for: [deleteEx, appEx], timeout: 30.0)
+        XCTAssertEqual(self.app.allUsers.count, 0)
+        XCTAssertEqual(triggered, 2)
     }
 
     func testMongoCollectionInsertCombine() {
