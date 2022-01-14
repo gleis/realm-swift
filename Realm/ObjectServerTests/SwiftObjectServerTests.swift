@@ -2462,6 +2462,22 @@ class AsyncAwaitObjectServerTests: SwiftSyncTestCase {
         XCTAssertEqual(app.currentUser?.customData["favourite_colour"], .string("green"))
         XCTAssertEqual(app.currentUser?.customData["apples"], .int64(10))
     }
+
+    func testDeleteUserAsyncAwait() async throws {
+        let email = "realm_tests_do_autoverify\(randomString(7))@\(randomString(7)).com"
+        let password = randomString(10)
+        let credentials: Credentials = .emailPassword(email: email, password: password)
+        try await app.emailPasswordAuth.registerUser(email: email, password: password)
+
+        let user = try await self.app.login(credentials: credentials)
+        XCTAssertNotNil(user)
+
+        XCTAssertNotNil(app.currentUser)
+        try await user.delete()
+
+        XCTAssertNil(app.currentUser)
+        XCTAssertEqual(app.allUsers.count, 0)
+    }
 }
 
 #endif // swift(>=5.5)
