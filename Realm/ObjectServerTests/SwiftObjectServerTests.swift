@@ -967,6 +967,20 @@ class SwiftObjectServerTests: SwiftSyncTestCase {
 
         XCTAssertNil(app.currentUser)
         XCTAssertEqual(app.allUsers.count, 0)
+
+        // Ensure user is deleted from the server
+        let serverEx = expectation(description: "server-deleted-user")
+        RealmServer.shared.retrieveUsers(appId) { result in
+            switch result {
+            case .success(let users):
+                let users = users as! [Any]
+                XCTAssertEqual(users.count, 0)
+                serverEx.fulfill()
+            case .failure:
+                XCTFail("Should delete User")
+            }
+        }
+        wait(for: [serverEx], timeout: 4.0)
     }
 
     func testAppLinkUser() {
