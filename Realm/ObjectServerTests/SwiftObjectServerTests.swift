@@ -925,6 +925,24 @@ class SwiftObjectServerTests: SwiftSyncTestCase {
     }
 
     func testDeleteUser() {
+        func userExistsOnServer(_ user: User) -> Bool {
+            let serverEx = expectation(description: "server-user")
+            var userExists = false
+            RealmServer.shared.retrieveUser(appId, userId: user.id) { result in
+                switch result {
+                case .success(let u):
+                    let u = u as! [String: Any]
+                    XCTAssertEqual(u["_id"] as! String, user.id)
+                    userExists = true
+                case .failure:
+                    userExists = false
+                }
+                serverEx.fulfill()
+            }
+            wait(for: [serverEx], timeout: 4.0)
+            return userExists
+        }
+
         let email = "realm_tests_do_autoverify\(randomString(7))@\(randomString(7)).com"
         let password = randomString(10)
 
@@ -950,6 +968,7 @@ class SwiftObjectServerTests: SwiftSyncTestCase {
         }
 
         wait(for: [loginEx], timeout: 4.0)
+        XCTAssertTrue(userExistsOnServer(syncUser!))
 
         XCTAssertEqual(syncUser?.id, app.currentUser?.id)
         XCTAssertEqual(app.allUsers.count, 1)
@@ -965,22 +984,9 @@ class SwiftObjectServerTests: SwiftSyncTestCase {
 
         wait(for: [deleteEx], timeout: 4.0)
 
+        XCTAssertFalse(userExistsOnServer(syncUser!))
         XCTAssertNil(app.currentUser)
         XCTAssertEqual(app.allUsers.count, 0)
-
-        // Ensure user is deleted from the server
-        let serverEx = expectation(description: "server-deleted-user")
-        RealmServer.shared.retrieveUsers(appId) { result in
-            switch result {
-            case .success(let users):
-                let users = users as! [Any]
-                XCTAssertEqual(users.count, 0)
-                serverEx.fulfill()
-            case .failure:
-                XCTFail("Should delete User")
-            }
-        }
-        wait(for: [serverEx], timeout: 4.0)
     }
 
     func testAppLinkUser() {

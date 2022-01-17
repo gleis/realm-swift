@@ -867,14 +867,14 @@ public class RealmServer: NSObject {
         return appId
     }
 
-    public func retrieveUsers(_ appId: String, _ completion: @escaping (Result<Any?, Error>) -> Void) {
+    public func retrieveUser(_ appId: String, userId: String, _ completion: @escaping (Result<Any?, Error>) -> Void) {
         guard let appServerId = try? RealmServer.shared.retrieveAppServerId(appId),
               let session = session else {
             completion(.failure(URLError.unknown as! Error))
             return
         }
         let app = session.apps[appServerId]
-        app.users.get(completion)
+        app.users[userId].get(completion)
     }
 
     // Remove User from MongoDB Realm using the Admin API
